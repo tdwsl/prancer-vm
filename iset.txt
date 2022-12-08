@@ -1,0 +1,28 @@
+Instruction Set for SpinCom VM
+
+		00 INT #
+1n LD Rn,#	01 SHL
+2n LD A,Rn	02 SHR
+3n LD Rn,A	03 INV
+4n LD A,(Rn)	04 PUSH
+5n LD (Rn),A	05 POP
+6n LDB A,(Rn)	06 RET
+7n LDB (Rn),A	07 EXT
+8n ADD Rn	08 CALL #
+9n SUB Rn	09 JMP #
+An CMP Rn	0A LD A,#
+Bn INC Rn	0B
+Cn DEC Rn	0C Z
+Dn AND Rn	0D NZ
+En OR Rn	0E C
+Fn XOR Rn	0F NC
+
+Flags are zero and carry
+Conditionals skip the next instruction (e.g. JNZ $FFFF would be NZ: JMP $FFFF)
+Most operations affecting A affect ZF
+INC and DEC also affect ZF
+POP and LD A do not affect ZF
+ADD, SUB, CMP, INC, DEC, SHL and SHR affect CF
+The stack expands from 0..$FF
+SP is not accessible
+
