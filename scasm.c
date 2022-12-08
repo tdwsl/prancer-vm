@@ -64,7 +64,7 @@ const struct instruction instructions[] = {
 };
 const int ninstructions = 22;
 
-char data[4*1024*1024];
+char data[65536];
 uint16_t size = 0;
 uint16_t org = 0;
 
