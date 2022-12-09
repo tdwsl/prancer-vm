@@ -66,7 +66,7 @@ int run() {
                 continue;
             case 0x09:
                 pc = little(*(uint16_t*)&memory[pc+1]);
-                break;
+                continue;
             case 0x0A:
                 a = little(*(uint16_t*)&memory[pc+1]);
                 break;
