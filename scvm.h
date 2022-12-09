@@ -4,19 +4,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#ifdef SC_BIG_ENDIAN
-#include <byteswap.h>
-#define little(A) __bswap_16(A)
-#else
-#define little(A) (A)
-#endif
+#define MEMORY_SIZE (4*1024*1024)
 
-extern unsigned char memory[65536];
-extern unsigned char sp;
-extern uint16_t pc;
+extern unsigned char memory[MEMORY_SIZE];
+extern unsigned char rsp;
+extern uint16_t rpc;
 extern uint16_t regs[16];
-extern uint16_t a;
+extern uint16_t acc;
+extern uint16_t bank;
 extern bool zf, cf;
+
+uint16_t getMemory(uint16_t m);
+void setMemory(uint16_t m, uint16_t b);
 
 int insSize(unsigned char ins);
 int run();

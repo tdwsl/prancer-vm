@@ -1,14 +1,23 @@
 #include "scvm.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
+/*#include <stdio.h>*/
 
-unsigned char memory[65536] = {0};
-unsigned char sp = 0;
-uint16_t pc = 0;
+unsigned char memory[MEMORY_SIZE] = {0};
+unsigned char rsp = 0;
+uint16_t rpc = 0;
 uint16_t regs[16] = {0};
-uint16_t a;
+uint16_t acc = 0;
+uint16_t bank = 0;
 bool zf = 0, cf = 0;
+
+uint16_t getMemory(uint16_t m) {
+    return memory[((uint32_t)bank << 8) | m];
+}
+
+void setMemory(uint16_t m, uint16_t b) {
+    memory[((uint32_t)bank << 8) | m] = b;
+}
 
 int insSize(unsigned char ins) {
     if(ins == 0) return 2;
@@ -20,131 +29,138 @@ int insSize(unsigned char ins) {
 }
 
 int run() {
+    unsigned char ins;
     for(;;) {
-        printf("%.4x %.2x\n", pc, memory[pc]);
-        switch(memory[pc] & 0x10) {
+        /*printf("zf = %d  cf = %d\n", zf, cf);
+        printf("%.4x %.2x\n", rpc, getMemory(rpc));*/
+        ins = getMemory(rpc);
+        switch(ins & 0xf0) {
         case 0x00:
-            switch(memory[pc]) {
+            switch(ins) {
             case 0x00:
-                pc += 2;
-                return memory[pc-1];
+                rpc += 2;
+                return getMemory(rpc-1);
             case 0x01:
-                cf = a & 0x8000;
-                a <<= 1;
-                zf = !a;
+                cf = acc & 0x8000;
+                acc <<= 1;
+                zf = !acc;
                 break;
             case 0x02:
-                cf = a & 1;
-                a >>= 1;
-                zf = !a;
+                cf = acc & 1;
+                acc >>= 1;
+                zf = !acc;
                 break;
             case 0x03:
-                a = ~a;
-                zf = !a;
+                acc = ~acc;
+                zf = !acc;
                 break;
             case 0x04:
-                *(uint16_t*)&memory[sp] = little(a);
-                sp += 2;
+                setMemory(rsp, acc);
+                setMemory(rsp, acc >> 8);
+                rsp += 2;
                 break;
             case 0x05:
-                sp -= 2;
-                a = little(*(uint16_t*)&memory[sp]);
+                rsp -= 2;
+                acc = getMemory(rsp) | (getMemory(rsp+1) << 8);
                 break;
             case 0x06:
-                sp -= 2;
-                pc = little(*(uint16_t*)&memory[sp]);
+                rsp -= 2;
+                rpc = getMemory(rsp) | (getMemory(rsp+1) << 8);
                 break;
             case 0x07:
-                if(a & 0x80) a |= 0xff00;
-                else a &= 0x00ff;
-                zf = !a;
+                if(acc & 0x80) acc |= 0xff00;
+                else acc &= 0x00ff;
+                zf = !acc;
                 break;
             case 0x08:
-                *(uint16_t*)&memory[sp] = little(pc);
-                sp += 2;
-                pc = little(*(uint16_t*)&memory[pc+1]);
+                setMemory(rsp, rpc);
+                setMemory(rsp, rpc << 8);
+                rsp += 2;
+                rpc = getMemory(rpc+1) | (getMemory(rpc+2) << 8);
                 continue;
             case 0x09:
-                pc = little(*(uint16_t*)&memory[pc+1]);
+                rpc = getMemory(rpc+1) | (getMemory(rpc+2) << 8);
                 continue;
             case 0x0A:
-                a = little(*(uint16_t*)&memory[pc+1]);
+                acc = getMemory(rpc+1) | (getMemory(rpc+2) << 8);
                 break;
             case 0x0C:
-                if(!zf) pc++;
+                if(!zf) rpc++;
                 break;
             case 0x0D:
-                if(zf) pc++;
+                if(zf) rpc++;
                 break;
             case 0x0E:
-                if(!cf) pc++;
+                if(!cf) rpc++;
                 break;
             case 0x0F:
-                if(cf) pc++;
+                if(cf) rpc++;
                 break;
             }
             break;
         case 0x10:
-            regs[memory[pc]&0x0f] = little(*(uint16_t*)&memory[pc+1]);
+            regs[ins&0x0f] = getMemory(rpc+1) | (getMemory(rpc+2) << 8);
             break;
         case 0x20:
-            a = regs[memory[pc]&0x0f];
-            zf = !a;
+            acc = regs[ins&0x0f];
+            zf = !acc;
             break;
         case 0x30:
-            regs[memory[pc]&0x0f] = a;
+            regs[ins&0x0f] = acc;
             break;
         case 0x40:
-            a = little(*(uint16_t*)&memory[regs[memory[pc]&0x0f]]);
-            zf = !a;
+            acc = getMemory(regs[ins&0x0f])
+                    | (getMemory(regs[ins&0x0f]+1) << 8);
+            zf = !acc;
             break;
         case 0x50:
-            *(uint16_t*)&memory[regs[memory[pc]&0x0f]] = little(a);
+            setMemory(regs[ins&0x0f], acc);
+            setMemory(regs[ins&0x0f]+1, acc >> 8);
             break;
         case 0x60:
-            a = memory[regs[memory[pc]&0x0f]];
-            zf = !a;
+            acc = getMemory(regs[ins&0x0f]);
+            zf = !acc;
             break;
         case 0x70:
-            memory[regs[memory[pc]&0x0f]] = a;
+            setMemory(regs[ins&0x0f], acc);
             break;
         case 0x80:
-            a += regs[memory[pc&0x0f]];
-            zf = !a;
-            cf = a < regs[memory[pc&0x0f]];
+            acc += regs[ins&0x0f];
+            zf = !acc;
+            cf = acc < regs[ins&0x0f];
             break;
         case 0x90:
-            cf = a <= regs[memory[pc&0x0f]];
-            a -= regs[memory[pc&0x0f]];
-            zf = !a;
+            cf = acc <= regs[ins&0x0f];
+            acc -= regs[ins&0x0f];
+            zf = !acc;
             break;
         case 0xA0:
-            cf = a <= regs[memory[pc&0x0f]];
-            zf = a == regs[memory[pc&0x0f]];
+            cf = acc <= regs[ins&0x0f];
+            zf = acc == regs[ins&0x0f];
             break;
         case 0xB0:
-            regs[memory[pc&0x0f]]++;
-            zf = !regs[memory[pc&0x0f]];
+            regs[ins&0x0f]++;
+            zf = !regs[ins&0x0f];
             cf = zf;
             break;
         case 0xC0:
-            cf = !regs[memory[pc&0x0f]];
-            regs[memory[pc&0x0f]]--;
-            zf = !regs[memory[pc&0x0f]];
+            cf = !regs[ins&0x0f];
+            regs[ins&0x0f]--;
+            zf = !regs[ins&0x0f];
             break;
         case 0xD0:
-            a &= regs[memory[pc&0x0f]];
-            zf = !a;
+            acc &= regs[ins&0x0f];
+            zf = !acc;
             break;
         case 0xE0:
-            a |= regs[memory[pc&0x0f]];
-            zf = !a;
+            acc |= regs[ins&0x0f];
+            zf = !acc;
             break;
         case 0xF0:
-            a ^= regs[memory[pc&0x0f]];
-            zf = !a;
+            acc ^= regs[ins&0x0f];
+            zf = !acc;
             break;
         }
-        pc += insSize(memory[pc]);
+        rpc += insSize(getMemory(rpc));
     }
 }

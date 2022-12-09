@@ -3,13 +3,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#ifdef SC_BIG_ENDIAN
-#include <byteswap.h>
-#define little(A) __bswap_16(A)
-#else
-#define little(A) (A)
-#endif
-
 enum {
     ARG_NONE=0,
     ARG_WORD,
@@ -546,8 +539,10 @@ int main(int argc, char **args) {
         if(resolveExpression(unresolved[i].s, &n)) {
             if(unresolved[i].size == ARG_BYTE)
                 data[unresolved[i].addr] = n;
-            else
-                *(int16_t*)&data[unresolved[i].addr] = little(n);
+            else {
+                data[unresolved[i].addr] = n;
+                data[unresolved[i].addr] = n >> 8;
+            }
             unresolved[i--] = unresolved[--nunresolved];
         }
     }
