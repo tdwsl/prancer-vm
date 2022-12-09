@@ -541,7 +541,7 @@ int main(int argc, char **args) {
                 data[unresolved[i].addr] = n;
             else {
                 data[unresolved[i].addr] = n;
-                data[unresolved[i].addr] = n >> 8;
+                data[unresolved[i].addr+1] = n >> 8;
             }
             unresolved[i--] = unresolved[--nunresolved];
         }

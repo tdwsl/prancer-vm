@@ -13,6 +13,7 @@ extern uint16_t regs[16];
 extern uint16_t acc;
 extern uint16_t bank;
 extern bool zf, cf;
+extern bool debugEnabled;
 
 uint16_t getMemory(uint16_t m);
 void setMemory(uint16_t m, uint16_t b);

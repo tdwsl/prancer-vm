@@ -1,7 +1,7 @@
 #include "scvm.h"
 #include <stdint.h>
 #include <stdbool.h>
-/*#include <stdio.h>*/
+#include <stdio.h>
 
 unsigned char memory[MEMORY_SIZE] = {0};
 unsigned char rsp = 0;
@@ -10,6 +10,7 @@ uint16_t regs[16] = {0};
 uint16_t acc = 0;
 uint16_t bank = 0;
 bool zf = 0, cf = 0;
+bool debugEnabled = false;
 
 uint16_t getMemory(uint16_t m) {
     return memory[((uint32_t)bank << 8) | m];
@@ -31,8 +32,10 @@ int insSize(unsigned char ins) {
 int run() {
     unsigned char ins;
     for(;;) {
-        /*printf("zf = %d  cf = %d\n", zf, cf);
-        printf("%.4x %.2x\n", rpc, getMemory(rpc));*/
+        if(debugEnabled) {
+            printf("zf = %d  cf = %d\n", zf, cf);
+            printf("%.4x %.2x\n", rpc, getMemory(rpc));
+        }
         ins = getMemory(rpc);
         switch(ins & 0xf0) {
         case 0x00:
