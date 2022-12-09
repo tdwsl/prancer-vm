@@ -13,11 +13,13 @@ bool zf = 0, cf = 0;
 bool debugEnabled = false;
 
 uint16_t getMemory(uint16_t m) {
-    return memory[((uint32_t)bank << 8) | m];
+    if(m < 32768) return memory[m];
+    return memory[((uint32_t)bank << 7) | m];
 }
 
 void setMemory(uint16_t m, uint16_t b) {
-    memory[((uint32_t)bank << 8) | m] = b;
+    if(m < 32768) memory[m] = b;
+    else memory[((uint32_t)bank << 7) | m] = b;
 }
 
 int insSize(unsigned char ins) {
