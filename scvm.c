@@ -11,9 +11,10 @@ bool zf = 0, cf = 0;
 
 int insSize(unsigned char ins) {
     if(ins == 0) return 2;
-    if(ins & 0x10 == 0x10) return 3;
-    if(ins & 0x08 == 0) return 1;
-    if(ins & 0x04 == 0) return 2;
+    if((ins & 0xf0) == 0x10) return 3;
+    if((ins & 0xf0) != 0) return 1;
+    if((ins & 0x08) == 0) return 1;
+    if((ins & 0x04) == 0) return 2;
     return 1;
 }
 
