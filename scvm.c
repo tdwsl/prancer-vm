@@ -102,7 +102,7 @@ int run() {
             *(uint16_t*)&memory[regs[memory[pc]&0x0f]] = little(a);
             break;
         case 0x60:
-            a = little(memory[regs[memory[pc]&0x0f]]);
+            a = memory[regs[memory[pc]&0x0f]];
             zf = !a;
             break;
         case 0x70:
