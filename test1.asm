@@ -11,7 +11,7 @@ hellomsg:
   db "Hello, world!\n",0
 
 printstr:
-  ld a,r0
+  ldb a,(r0)
   z: ret
   inc r0
   int 1
