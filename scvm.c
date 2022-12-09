@@ -119,18 +119,18 @@ int run() {
             zf = !a;
             break;
         case 0xA0:
+            cf = a <= regs[memory[pc&0x0f]];
+            zf = a == regs[memory[pc&0x0f]];
+            break;
+        case 0xB0:
             regs[memory[pc&0x0f]]++;
             zf = !regs[memory[pc&0x0f]];
             cf = zf;
             break;
-        case 0xB0:
+        case 0xC0:
             cf = !regs[memory[pc&0x0f]];
             regs[memory[pc&0x0f]]--;
             zf = !regs[memory[pc&0x0f]];
-            break;
-        case 0xC0:
-            cf = a <= regs[memory[pc&0x0f]];
-            zf = a == regs[memory[pc&0x0f]];
             break;
         case 0xD0:
             a &= regs[memory[pc&0x0f]];
