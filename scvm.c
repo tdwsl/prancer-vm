@@ -1,6 +1,7 @@
 #include "scvm.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 unsigned char memory[65536] = {0};
 unsigned char sp = 0;
@@ -14,7 +15,7 @@ int insSize(unsigned char ins) {
     if((ins & 0xf0) == 0x10) return 3;
     if((ins & 0xf0) != 0) return 1;
     if((ins & 0x08) == 0) return 1;
-    if((ins & 0x04) == 0) return 2;
+    if((ins & 0x04) == 0) return 3;
     return 1;
 }
 
