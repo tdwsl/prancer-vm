@@ -5,7 +5,7 @@
 
 enum {
     ARG_NONE=0,
-    ARG_SWORD,
+    ARG_WORD,
     ARG_BYTE,
     ARG_REG,
 };
@@ -17,13 +17,13 @@ struct instruction {
 
 struct label {
     char s[50];
-    uint32_t addr;
+    uint16_t addr;
 };
 
 struct unresolved {
     char s[100];
     char size;
-    uint32_t addr;
+    uint16_t addr;
 };
 
 struct fileInfo {
@@ -40,8 +40,8 @@ const struct instruction instructions[] = {
     {"pop", 0x05, 0},
     {"ret", 0x06, 0},
     {"ext", 0x07, 0},
-    {"call", 0x08, ARG_SWORD},
-    {"jmp", 0x09, ARG_SWORD},
+    {"call", 0x08, ARG_WORD},
+    {"jmp", 0x09, ARG_WORD},
     {"z", 0x0C, 0},
     {"nz", 0x0D, 0},
     {"c", 0x0E, 0},
@@ -58,8 +58,8 @@ const struct instruction instructions[] = {
 const int ninstructions = 22;
 
 char data[65536];
-uint32_t size = 0;
-uint32_t org = 0;
+uint16_t size = 0;
+uint16_t org = 0;
 
 struct label labels[1000];
 struct unresolved unresolved[300];
@@ -88,7 +88,7 @@ int findInstruction(char *s) {
     return -1;
 }
 
-int isHex(char *s, uint32_t *n) {
+int isHex(char *s, uint16_t *n) {
     if(*s == 0) return 0;
     *n = 0;
     while(*s) {
@@ -99,7 +99,7 @@ int isHex(char *s, uint32_t *n) {
     return 1;
 }
 
-int isBin(char *s, uint32_t *n) {
+int isBin(char *s, uint16_t *n) {
     if(*s == 0) return 0;
     *n = 0;
     while(*s) {
@@ -109,7 +109,7 @@ int isBin(char *s, uint32_t *n) {
     return 1;
 }
 
-int isInteger(char *s, uint32_t *n) {
+int isInteger(char *s, uint16_t *n) {
     char neg;
     if(*s == '$' || *s == '&') return isHex(++s, n);
     if(*s == '%') return isBin(++s, n);
@@ -130,7 +130,7 @@ int precedence(char *op) {
     return (int)(strstr(prstr, op)-prstr)/4;
 }
 
-int resolveExpression(char *ex, int32_t *v) {
+int resolveExpression(char *ex, int16_t *v) {
     const char *delim = "()~!/%*|^&-+";
     const char *ops = delim+2;
     char tokheap[1000];
@@ -141,7 +141,7 @@ int resolveExpression(char *ex, int32_t *v) {
     int exsz = 0, dsp = 0, isp = 0;
     int ntokens = 0;
     int i;
-    int32_t n;
+    int16_t n;
 
     p = tokheap;
     while(*ex) {
@@ -242,7 +242,6 @@ int resolveExpression(char *ex, int32_t *v) {
 
     if(isp != 1) error("invalid expression");
 
-    istack[0] &= 0xffffff;
     *v = istack[0];
 }
 
@@ -268,7 +267,7 @@ int indirect(char **s) {
 }
 
 void addByte(char *ex) {
-    int32_t n;
+    int16_t n;
     resolveExpression(ex, &n);
     strcpy(unresolved[nunresolved].s, ex);
     unresolved[nunresolved].addr = size;
@@ -276,19 +275,17 @@ void addByte(char *ex) {
     nunresolved++;
     size++;
     org++;
-    org &= 0xffffff;
 }
 
-void addSword(char *ex) {
-    int32_t n;
+void addWord(char *ex) {
+    int16_t n;
     resolveExpression(ex, &n);
     strcpy(unresolved[nunresolved].s, ex);
     unresolved[nunresolved].addr = size;
-    unresolved[nunresolved].size = ARG_SWORD;
+    unresolved[nunresolved].size = ARG_WORD;
     nunresolved++;
-    size += 3;
-    org += 3;
-    org &= 0xffffff;
+    size += 2;
+    org += 2;
 }
 
 void asmFile(const char *filename);
@@ -304,7 +301,7 @@ void asmLine(char *line) {
     int ntokens = 0;
     char *p;
     int i;
-    int32_t n;
+    int16_t n;
 
     /*printf("assembling: %s\n", line);*/
 
@@ -371,7 +368,7 @@ void asmLine(char *line) {
             if(ntokens != 1) error("wrong no of args");
         } else if(ntokens != 2) error("wrong no of args");
         else if(instructions[i].arg == ARG_BYTE) addByte(tokens[1]);
-        else if(instructions[i].arg == ARG_SWORD) addSword(tokens[1]);
+        else if(instructions[i].arg == ARG_WORD) addWord(tokens[1]);
         else if(instructions[i].arg == ARG_REG) {
             i = getReg(tokens[1]);
             if(i == -1) error("invalid register\n");
@@ -397,14 +394,14 @@ void asmLine(char *line) {
                 data[size++] = 0x20 | i; org++;
             } else {
                 data[size++] = 0x0A; org++;
-                addSword(tokens[2]);
+                addWord(tokens[2]);
             }
         } else if((i = getReg(tokens[1])) != -1) {
             if(!strcmp(tokens[2], "a")) {
                 data[size++] = 0x30 | i; org++;
             } else {
                 data[size++] = 0x10 | i; org++;
-                addSword(tokens[2]);
+                addWord(tokens[2]);
             }
         } else opassert(0);
         return;
@@ -446,10 +443,10 @@ void asmLine(char *line) {
         return;
     }
 
-    if(!strcmp(tokens[0], "ds")) {
-        if(ntokens == 1) error("no args for ds");
+    if(!strcmp(tokens[0], "dw")) {
+        if(ntokens == 1) error("no args for dw");
         for(i = 1; i < ntokens; i++)
-            addSword(tokens[i]);
+            addWord(tokens[i]);
         return;
     }
 
@@ -462,12 +459,12 @@ void asmLine(char *line) {
         return;
     }
 
-    if(!strcmp(tokens[0], "ress")) {
-        if(ntokens != 3) error("wrong no of args for ress");
+    if(!strcmp(tokens[0], "resw")) {
+        if(ntokens != 3) error("wrong no of args for resw");
         if(!resolveExpression(tokens[1], &n))
-            error("failed to resolve quantity for ress");
+            error("failed to resolve quantity for resw");
         for(i = 0; i < n; i++)
-            addSword(tokens[2]);
+            addWord(tokens[2]);
         return;
     }
 
@@ -526,7 +523,7 @@ void asmFile(const char *filename) {
 
 int main(int argc, char **args) {
     int i;
-    int32_t n;
+    int16_t n;
     FILE *fp;
 
     if(argc != 3) { printf("usage: %s <file> <out>\n", args[0]); return 0; }
@@ -535,7 +532,7 @@ int main(int argc, char **args) {
     if(nlabels) {
         printf("labels:\n");
         for(i = 0; i < nlabels; i++)
-            printf("$%.6x %s\n", labels[i].addr, labels[i].s);
+            printf("$%.4x %s\n", labels[i].addr, labels[i].s);
     }
 
     for(i = 0; i < nunresolved; i++) {
@@ -545,7 +542,6 @@ int main(int argc, char **args) {
             else {
                 data[unresolved[i].addr] = n;
                 data[unresolved[i].addr+1] = n >> 8;
-                data[unresolved[i].addr+2] = n >> 16;
             }
             unresolved[i--] = unresolved[--nunresolved];
         }

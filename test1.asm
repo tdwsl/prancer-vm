@@ -1,7 +1,7 @@
 ; hello world for spincom
 
-  org $100-3
-  ds $100
+  org $100-2
+  dw $100
 
   ld r0,hellomsg
   call printstr

@@ -4,18 +4,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MEMORY_SIZE (4*1024*1024)
+#define MEMORY_SIZE 65536
 
 extern unsigned char memory[MEMORY_SIZE];
 extern unsigned char rsp;
-extern uint32_t rpc;
-extern uint32_t regs[16];
-extern uint32_t acc;
+extern uint16_t rpc;
+extern uint16_t regs[16];
+extern uint16_t acc;
 extern bool zf, cf;
 extern bool debugEnabled;
 
-uint32_t get24(uint32_t m);
-void set24(uint32_t m, uint32_t b);
+uint16_t get16(uint16_t m);
+void set16(uint16_t m, uint16_t b);
 
 int insSize(unsigned char ins);
 int run();
