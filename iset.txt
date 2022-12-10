@@ -1,4 +1,4 @@
-Instruction Set for SpinCom VM
+Instruction Set for SwordCom VM
 
 		00 INT #
 1n LD Rn,#	01 SHL
