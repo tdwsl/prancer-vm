@@ -8,15 +8,14 @@
 
 extern unsigned char memory[MEMORY_SIZE];
 extern unsigned char rsp;
-extern uint16_t rpc;
-extern uint16_t regs[16];
-extern uint16_t acc;
-extern uint16_t bank;
+extern uint32_t rpc;
+extern uint32_t regs[16];
+extern uint32_t acc;
 extern bool zf, cf;
 extern bool debugEnabled;
 
-uint16_t getMemory(uint16_t m);
-void setMemory(uint16_t m, uint16_t b);
+uint32_t get24(uint32_t m);
+void set24(uint32_t m, uint32_t b);
 
 int insSize(unsigned char ins);
 int run();

@@ -17,12 +17,21 @@ Dn AND Rn	0D NZ
 En OR Rn	0E C
 Fn XOR Rn	0F NC
 
+ld r0,8
+-:
+shr
+dec r0
+nz: jmp -
+rep 8: shr
+
+Registers use swords, 24-bit values
+INT uses 1 byte, other immediate values use 4
 Flags are zero and carry
-Conditionals skip the next instruction (e.g. JNZ $FFFF would be NZ: JMP $FFFF)
+Conditionals skip the next instruction (e.g. JNZ addr would be NZ: JMP addr)
 Most operations affecting A affect ZF
 INC and DEC also affect ZF
 POP and LD A do not affect ZF
 ADD, SUB, CMP, INC, DEC, SHL and SHR affect CF
-The stack expands from 0..$FF
+The stack expands from 0..$FF and supports up to 85 swords
 SP is not accessible
 
