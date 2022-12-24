@@ -24,6 +24,7 @@ int main(int argc, char **args) {
     while(i = run()) {
         switch(i) {
         case 1: printf("%c", acc); break;
+        case 2: acc = fgetc(stdin); break;
         }
     }
 
