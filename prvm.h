@@ -1,5 +1,5 @@
-#ifndef SCVM_H
-#define SCVM_H
+#ifndef PRVM_H
+#define PRVM_H
 
 #include <stdint.h>
 #include <stdbool.h>

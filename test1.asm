@@ -1,4 +1,4 @@
-; hello world for spincom
+; hello world for prancervm
 
   org $100-2
   dw $100

@@ -1,4 +1,4 @@
-Instruction Set for SpinCom VM
+Instruction set for Prancer VM
 
 		00 INT #
 1n LD Rn,#	01 B #
@@ -18,7 +18,8 @@ En OR Rn	0E CALL #
 Fn XOR Rn	0F LD A,#
 
 Registers use 16-bit values
-INT uses 1 byte, other immediate values use 2
+Branches are relative from the next instruction after B
+There is no long jump, but CALL works with absolute addresses
 Flags are zero and carry
 Most operations affecting A affect ZF
 INC and DEC also affect ZF
