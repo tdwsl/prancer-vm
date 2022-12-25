@@ -35,11 +35,23 @@ l0:
   b l0
 
 runtoken:
-  b runtokenq
   call findword
+  bnz runtokeni
+  inc r0
+  inc r0
+  inc r0
+  ldb a,(r0)
+  inc r0
+  add r0
+  push
+  ret
+runtokeni:
+  call tointeger
   bnz runtokenq
   ld a,r0
-  push
+  ld (r15),a
+  inc r15
+  inc r15
   ret
 runtokenq:
   ld r0,wordstr
@@ -55,6 +67,25 @@ runtokenq:
   ret
 runtokenerrmsg:
   db 3," ?\n"
+
+; convert wordstr to integer in r0
+tointeger:
+  ld r1,wordstr
+  ldb a,(r1)
+  ld r2,a
+  inc r1
+  ldb a,(r1)
+  ld r2,"-"
+  cmp r2
+  bnz tointegernm
+  inc r1
+  dec r2
+  bz tointegerfail
+tointegernm:
+tointeger0:
+tointegerfail:
+  inc r1
+  ret
 
 ; r0 = addr, r1 = len
 printstr:
@@ -72,42 +103,34 @@ findword:
   ld r0,a
   ld r3,wordstr
   ldb a,(r3)
-  inc r3
   ld r4,a  ; r3 = addr, r4 = len
+  inc r3
 findword0:
-  ld a,(r0)
-  ld r1,a
-  inc r0
-  inc r0
-  inc r0
-  ld a,(r0)
-  ld r6,a
-  inc r0
   ld a,r0
   ld r5,a
+  inc r5
+  inc r5
+  inc r5
+  ldb a,(r5)
+  ld r6,a
+  inc r5
   call streq
   bz findwordend
-  ld a,r0
+  ld a,(r0)
   bz findwordfail
   ld r0,a
   b findword0
-findwordend:
-  ld a,r5
-  add r6
-  ld r0,a
-  xor r0
-  ret
 findwordfail:
   cmp r3
+findwordend:
   ret
 
 ; compare string r3 r4 with string r5 r6
 streq:
   ld a,r4
-  cmp r5
-  bz streqeqlen
+  cmp r6
+  bnz streqend
   ret
-streqeqlen:
   ld a,r3
   ld r7,a
   ld a,r5
@@ -171,9 +194,9 @@ getnextc:
 
 ; dictionary
 wd_dup:
-  dw 0
-  db 0
-  db 3,"dup"
+  dw 0       ; prev word addr
+  db 0       ; flags
+  db 3,"dup" ; len, name
   dec r15
   dec r15
   ld a,(r15)
