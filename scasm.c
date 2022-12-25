@@ -59,7 +59,7 @@ const struct instruction instructions[] = {
     {"or", 0xE0, ARG_REG},
     {"xor", 0xF0, ARG_REG},
 };
-const int ninstructions = 22;
+const int ninstructions = 24;
 
 char data[65536];
 uint16_t size = 0;

@@ -49,7 +49,7 @@ printstr:
   int 1
   inc r1
   dec r0
-  nz: jmp printstr
+  bnz printstr
   ret
 
 ; find word
@@ -73,11 +73,13 @@ findword0:
   ld a,r0
   ld r5,a
   call streq
-  z: ret
+  bz findwordend
   ld a,r0
-  z: jmp findwordfail
+  bz findwordfail
   ld r0,a
-  jmp findword0
+  b findword0
+findwordend:
+  ret
 findwordfail:
   cmp r3
   ret
@@ -86,7 +88,9 @@ findwordfail:
 streq:
   ld a,r4
   cmp r5
-  nz: ret
+  bz streqeqlen
+  ret
+streqeqlen:
   ld a,r3
   ld r7,a
   ld a,r5
@@ -98,11 +102,12 @@ streq0:
   ld r11,a
   ldb a,(r8)
   cmp r11
-  nz: ret
+  bnz streqend
   inc r7
   inc r8
   dec r9
-  nz: jmp streq0
+  bnz streq0
+streqend:
   ret
 
 ; get next word
@@ -112,23 +117,23 @@ getnext:
 getnext0:
   call getnextc
   cmp r12
-  nc: jmp getnext1
+  bnc getnext1
   ldb (r13),a
   inc r13
-  jmp getnext0
+  b getnext0
 getnext1:
   ld r0,a
   ld a,r13
   ld r13,wordstr+1
   sub r13
-  z: jmp getnextz
+  bz getnextz
   ldb (r13),a
   ret
 getnextz:
   ld a,r0
   or r0
-  z: jmp getnexteof
-  jmp getnext0
+  bz getnexteof
+  b getnext0
 getnexteof:
   int 0
 
