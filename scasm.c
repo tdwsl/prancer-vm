@@ -7,6 +7,7 @@ enum {
     ARG_NONE=0,
     ARG_WORD,
     ARG_BYTE,
+    ARG_REL,
     ARG_REG,
 };
 
@@ -33,15 +34,18 @@ struct fileInfo {
 
 const struct instruction instructions[] = {
     {"int", 0x00, ARG_BYTE},
-    {"shl", 0x01, 0},
-    {"shr", 0x02, 0},
-    {"inv", 0x03, 0},
-    {"push", 0x04, 0},
-    {"pop", 0x05, 0},
-    {"ret", 0x06, 0},
-    {"ext", 0x07, 0},
-    {"call", 0x08, ARG_WORD},
-    {"jmp", 0x09, ARG_WORD},
+    {"b", 0x01, ARG_REL},
+    {"bz", 0x02, ARG_REL},
+    {"bnz", 0x03, ARG_REL},
+    {"bc", 0x04, ARG_REL},
+    {"bnc", 0x05, ARG_REL},
+    {"shl", 0x08, 0},
+    {"shr", 0x09, 0},
+    {"inv", 0x0A, 0},
+    {"push", 0x0B, 0},
+    {"pop", 0x0C, 0},
+    {"ret", 0x0D, 0},
+    {"call", 0x0E, ARG_WORD},
     {"z", 0x0C, 0},
     {"nz", 0x0D, 0},
     {"c", 0x0E, 0},
@@ -302,6 +306,7 @@ void asmLine(char *line) {
     char *p;
     int i;
     int16_t n;
+    char buf[140];
 
     /*printf("assembling: %s\n", line);*/
 
@@ -368,6 +373,10 @@ void asmLine(char *line) {
             if(ntokens != 1) error("wrong no of args");
         } else if(ntokens != 2) error("wrong no of args");
         else if(instructions[i].arg == ARG_BYTE) addByte(tokens[1]);
+        else if(instructions[i].arg == ARG_REL) {
+            sprintf(buf, "(%s)-$%.4x", tokens[1], org+1);
+            addByte(buf);
+        }
         else if(instructions[i].arg == ARG_WORD) addWord(tokens[1]);
         else if(instructions[i].arg == ARG_REG) {
             i = getReg(tokens[1]);
@@ -393,7 +402,7 @@ void asmLine(char *line) {
             if(i != -1) {
                 data[size++] = 0x20 | i; org++;
             } else {
-                data[size++] = 0x0A; org++;
+                data[size++] = 0x0F; org++;
                 addWord(tokens[2]);
             }
         } else if((i = getReg(tokens[1])) != -1) {

@@ -21,11 +21,10 @@ void set16(uint16_t m, uint16_t s) {
 }
 
 int insSize(unsigned char ins) {
-    if(ins == 0) return 2;
     if((ins & 0xf0) == 0x10) return 3;
     if((ins & 0xf0) != 0) return 1;
-    if((ins & 0x08) == 0) return 1;
-    if((ins & 0x04) == 0) return 3;
+    if((ins & 0x08) == 0) return 2;
+    if((ins & 0x0e) == 0x0e) return 3;
     return 1;
 }
 
@@ -35,7 +34,12 @@ int run() {
         if(debugEnabled) {
             printf("zf = %d  cf = %d\n", zf, cf);
             printf("acc = %.4x\n", acc);
-            printf("%.4x %.2x\n", rpc, memory[rpc]);
+            printf("%.4x %.2x ", rpc, memory[rpc]);
+            switch(insSize(memory[rpc])) {
+            case 2: printf("%.2x", memory[rpc+1]); break;
+            case 3: printf("%.4x", get16(rpc+1)); break;
+            }
+            printf("\n");
         }
         ins = memory[rpc];
         switch(ins & 0xf0) {
@@ -45,58 +49,53 @@ int run() {
                 rpc += 2;
                 return memory[rpc-1];
             case 0x01:
+                rpc += (char)memory[rpc+1] + 2;
+                continue;
+            case 0x02:
+                if(zf) { rpc += (char)memory[rpc+1] + 2; continue; }
+                break;
+            case 0x03:
+                if(!zf) { rpc += (char)memory[rpc+1] + 2; continue; }
+                break;
+            case 0x04:
+                if(cf) { rpc += (char)memory[rpc+1] + 2; continue; }
+                break;
+            case 0x05:
+                if(!cf) { rpc += (char)memory[rpc+1] + 2; continue; }
+                break;
+            case 0x08:
                 cf = acc & 0x8000;
                 acc <<= 1;
                 zf = !acc;
                 break;
-            case 0x02:
+            case 0x09:
                 cf = acc & 1;
                 acc >>= 1;
                 zf = !acc;
                 break;
-            case 0x03:
+            case 0x0A:
                 acc = ~acc;
                 zf = !acc;
                 break;
-            case 0x04:
+            case 0x0B:
                 set16(rsp, acc);
                 rsp += 2;
                 break;
-            case 0x05:
+            case 0x0C:
                 rsp -= 2;
                 acc = get16(rsp);
                 break;
-            case 0x06:
+            case 0x0D:
                 rsp -= 2;
                 rpc = get16(rsp);
                 break;
-            case 0x07:
-                if(acc & 0x80) acc |= 0xff00;
-                else acc &= 0x00ff;
-                zf = !acc;
-                break;
-            case 0x08:
+            case 0x0E:
                 set16(rsp, rpc);
                 rsp += 2;
                 rpc = get16(rpc+1);
                 continue;
-            case 0x09:
-                rpc = get16(rpc+1);
-                continue;
-            case 0x0A:
-                acc = get16(rpc+1);
-                break;
-            case 0x0C:
-                if(!zf) rpc++;
-                break;
-            case 0x0D:
-                if(zf) rpc++;
-                break;
-            case 0x0E:
-                if(!cf) rpc++;
-                break;
             case 0x0F:
-                if(cf) rpc++;
+                acc = get16(rpc+1);
                 break;
             }
             break;

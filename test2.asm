@@ -29,20 +29,22 @@ hellomsgp2:
 
 printstr:
   ldb a,(r0)
-  z: ret
+  bz printstr0
   inc r0
   int 1
-  jmp printstr
+  b printstr
+printstr0:
+  ret
 
 readline:
   ld r1,"\n"
 readline0:
   int 2
   cmp r1
-  z: jmp readline1
+  bz readline1
   ldb (r0),a
   inc r0
-  jmp readline0
+  b readline0
 readline1:
   ld a,0
   ldb (r0),a

@@ -12,7 +12,9 @@ hellomsg:
 
 printstr:
   ldb a,(r0)
-  z: ret
+  bz printstr0
   inc r0
   int 1
-  jmp printstr
+  b printstr
+printstr0:
+  ret
