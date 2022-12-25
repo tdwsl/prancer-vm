@@ -29,26 +29,39 @@
   call wd_emit+2+5+1
   ;int 0
 
+l0:
   call getnext
-  inc r1
-  inc r1
-  inc r1
-  ldb a,(r1)
-  ld r2,a
-  inc r1
-  ld a,r1
-  ld r0,a
-  ld a,r2
-  ld r1,a
-  call printstr
-  ;call findword
-  int 0
+  call runtoken
+  b l0
 
+runtoken:
+  b runtokenq
+  call findword
+  bnz runtokenq
+  ld a,r0
+  push
+  ret
+runtokenq:
+  ld r0,wordstr
+  ldb a,(r0)
+  ld r1,a
+  inc r0
+  call printstr
+  ld r0,runtokenerrmsg
+  ldb a,(r0)
+  ld r1,a
+  inc r0
+  call printstr
+  ret
+runtokenerrmsg:
+  db 3," ?\n"
+
+; r0 = addr, r1 = len
 printstr:
-  ld a,(r1)
+  ldb a,(r0)
   int 1
-  inc r1
-  dec r0
+  inc r0
+  dec r1
   bnz printstr
   ret
 
@@ -79,6 +92,10 @@ findword0:
   ld r0,a
   b findword0
 findwordend:
+  ld a,r5
+  add r6
+  ld r0,a
+  xor r0
   ret
 findwordfail:
   cmp r3
@@ -113,11 +130,20 @@ streqend:
 ; get next word
 getnext:
   ld r13,wordstr+1
-  ld r12,33
+  ld r12," "+1
+  ld r11,"A"
+  ld r10,"Z"+1
+  ld r9,32
 getnext0:
   call getnextc
   cmp r12
   bnc getnext1
+  cmp r11
+  bnc getnextnaz
+  cmp r10
+  bc getnextnaz
+  add r9
+getnextnaz:
   ldb (r13),a
   inc r13
   b getnext0
@@ -127,12 +153,13 @@ getnext1:
   ld r13,wordstr+1
   sub r13
   bz getnextz
+  dec r13
   ldb (r13),a
   ret
 getnextz:
   ld a,r0
   or r0
-  bz getnexteof
+  bnc getnexteof
   b getnext0
 getnexteof:
   int 0

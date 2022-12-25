@@ -129,12 +129,12 @@ int run() {
             cf = acc < regs[ins&0x0f];
             break;
         case 0x90:
-            cf = acc <= regs[ins&0x0f];
+            cf = acc >= regs[ins&0x0f];
             acc -= regs[ins&0x0f];
             zf = !acc;
             break;
         case 0xA0:
-            cf = acc <= regs[ins&0x0f];
+            cf = acc >= regs[ins&0x0f];
             zf = acc == regs[ins&0x0f];
             break;
         case 0xB0:

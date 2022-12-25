@@ -59,7 +59,7 @@ const struct instruction instructions[] = {
     {"or", 0xE0, ARG_REG},
     {"xor", 0xF0, ARG_REG},
 };
-const int ninstructions = 24;
+const int ninstructions = 25;
 
 char data[65536];
 uint16_t size = 0;
@@ -349,7 +349,11 @@ void asmLine(char *line) {
             if(*line == 0) error("unterminated string");
             line++;
             while(*line && *line <= ' ') line++;
-            if(*line && *line != ',') error("string syntax error");
+            if(*line && *line != ',') {
+                str--;
+                while(*line && *line != ',') *(str++) = *(line++);
+                *(str++) = 0;
+            }
         } else if(*line == ',') {
             *(str++) = 0;
             tokens[ntokens++] = pstr;
