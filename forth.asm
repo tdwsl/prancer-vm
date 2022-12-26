@@ -7,8 +7,8 @@
 
   ; set up stack and dict
   ld r15,stack
-  ld a,10
   ld r0,baseval
+  ld a,10
   ld (r0),a
   ld r0,lastword
   ld a,deflastword
@@ -16,18 +16,6 @@
   ld r0,nextword
   ld a,defnextword
   ld (r0),a
-
-  ld a,12
-  ld (r15),a
-  inc r15
-  inc r15
-  ld a,2
-  ld (r15),a
-  inc r15
-  inc r15
-  call wd_sub+2+2+1
-  call wd_emit+2+5+1
-  ;int 0
 
 l0:
   call getnext
@@ -43,7 +31,10 @@ runtoken:
   ldb a,(r0)
   inc r0
   add r0
-  push
+  ld r0,runtokenaddr+1
+  ld (r0),a
+runtokenaddr:
+  call $ffff
   ret
 runtokeni:
   call tointeger
@@ -82,7 +73,17 @@ tointeger:
   ldb a,(r1)
   ld r2,a
   inc r1
+
   ld r3,0
+  ldb a,(r1)
+  ld r4,"-"
+  cmp r4
+  bnz tointegerpos
+  inc r1
+  dec r2
+  bz tointegerfail
+  inc r3
+tointegerpos:
 
   ld r0,0
   ld r10,"a"-10
@@ -99,23 +100,13 @@ tointeger:
   ld r7,a
   ld a,r4
   ld r6,a
-  b tointegerb10
+  b tointeger0
 tointegera10:
   ld r5,"9"+1
   ld r6,"a"
   ld r7,"a"-10
   add r7
   ld r7,a
-tointegerb10:
-
-  ldb a,(r1)
-  ld r2,"-"
-  cmp r2
-  bnz tointeger0
-  inc r1
-  dec r2
-  bz tointegerfail
-  ld r3,1
 
 tointeger0:
   ldb a,(r1)
@@ -132,26 +123,26 @@ tointeger1:
   bc tointegerfail
   sub r10
 tointegernext:
-  push
+  ld r11,a
   ld a,r0
   ld r8,a
   call mul
   ld a,r8
   ld r0,a
-  pop
+  ld a,r11
   add r0
   ld r0,a
   inc r1
   dec r2
-  bnc tointeger0
+  bnz tointeger0
 
   ld a,r3
-  bnz tointegerpos
+  bz tointegerwaspos
   ld a,r0
   inv
   ld r0,a
   inc r0
-tointegerpos:
+tointegerwaspos:
 
   ld a,r0
   cmp r0
@@ -199,7 +190,7 @@ findword0:
   ld r0,a
   b findword0
 findwordfail:
-  cmp r3
+  inc r5
 findwordend:
   ret
 
@@ -208,7 +199,6 @@ streq:
   ld a,r4
   cmp r6
   bnz streqend
-  ret
   ld a,r3
   ld r7,a
   ld a,r5
@@ -217,9 +207,9 @@ streq:
   ld r9,a
 streq0:
   ldb a,(r7)
-  ld r11,a
+  ld r10,a
   ldb a,(r8)
-  cmp r11
+  cmp r10
   bnz streqend
   inc r7
   inc r8
