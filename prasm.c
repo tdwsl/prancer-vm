@@ -488,6 +488,15 @@ void asmLine(char *line) {
     nlabels++;
 }
 
+char *struqchr(char *s, char d) {
+    while(*s) {
+        if(*s == '"') while(*(++s) != '"' && *s);
+        if(*s == d) return s;
+        s++;
+    }
+    return 0;
+}
+
 void asmFile(const char *filename) {
     FILE *fp;
     char line[500];
@@ -509,19 +518,17 @@ void asmFile(const char *filename) {
         while(line[i-1] != '\n' && !feof(fp));
         line[i-1] = 0;
 
-        p = strchr(line, ';');
-        if(p) *p = 0;
-
         for(p = line; *p; p++) {
             if(*p == '"') while(*(++p) != '"' && *p);
             if(*p >= 'A' && *p <= 'Z') *p += 'a'-'A';
             if(*p == '\t') *p = ' ';
+            if(*p == ';') { *p = 0; break; }
         }
 
         p = line;
         while(p) {
             while(*p && *p <= ' ') p++;
-            if(p1 = strchr(p, ':')) *(p1++) = 0;
+            if(p1 = struqchr(p, ':')) *(p1++) = 0;
             if(*p) asmLine(p);
             p = p1;
         }

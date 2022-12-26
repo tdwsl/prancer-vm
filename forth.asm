@@ -16,6 +16,9 @@
   ld r0,nextword
   ld a,defnextword
   ld (r0),a
+  ld r0,compileflags
+  ld a,0
+  ldb (r0),a
 
 l0:
   call getnext
@@ -25,12 +28,35 @@ l0:
 runtoken:
   call findword
   bnz runtokeni
+
   inc r0
   inc r0
+  ld a,r0
+  ld r2,a
   inc r0
   ldb a,(r0)
   inc r0
   add r0
+  ld r0,a
+  ld r1,compileflags
+  ldb a,(r1)
+  bz runtokenout
+
+  ldb a,(r2)
+  bnz runtokenimm
+  ld a,$0e ; call
+  ldb (r14),a
+  inc r14
+  ld a,r0
+  ld (r14),a
+  inc r14
+  inc r14
+  ret
+runtokenout:
+  ldb a,(r2)
+  bnz runtokencoerr
+runtokenimm:
+  ld a,r0
   ld r0,runtokenaddr+1
   ld (r0),a
 runtokenaddr:
@@ -39,19 +65,50 @@ runtokenaddr:
 runtokeni:
   call tointeger
   bnz runtokenq
+  ld r1,compileflags
+  ldb a,(r1)
+  bz runtokeniout:
+  ld a,$0f ; ld a
+  ldb (r14),a
+  inc r14
+  ld a,r0
+  ld (r14),a
+  inc r14
+  inc r14
+  ld a,$5f ; ld (r15),a
+  ldb (r14),a
+  inc r14
+  ld a,$bf ; inc r15
+  ldb (r14),a
+  inc r14
+  ldb (r14),a
+  inc r14
+  ret
+runtokeniout:
   ld a,r0
   ld (r15),a
   inc r15
   inc r15
   ret
 runtokenq:
+  ld r0,compileflags
+  ld a,0
+  ldb (r0),a
   ld r0,wordstr
   call printstrp
   ld r0,runtokenerrmsg
   call printstrp
   ret
+runtokencoerr:
+  ld r0,wordstr
+  call printstrp
+  ld r0,runtokencoerrmsg
+  call printstrp
+  ret
 runtokenerrmsg:
   db 3," ?\n"
+runtokencoerrmsg:
+  db 17," is compile-only\n"
 
 ; mul r8 by r9
 mul:
@@ -65,6 +122,10 @@ mul0:
   ld r8,a
   pop
   ld r9,a
+  ret
+
+; div r8 by r9
+div:
   ret
 
 ; convert wordstr to integer in r0
@@ -261,10 +322,69 @@ getnextc:
   ret
 
 ; dictionary
-wd_dup:
+wd_col:
   dw 0       ; prev word addr
   db 0       ; flags
-  db 3,"dup" ; len, name
+  db 1,":"   ; len,name
+
+  call getnext
+  ld r0,compileflags
+  ld a,1
+  ldb (r0),a
+
+  ld r0,nextword
+  ld a,(r0)
+  ld r14,a
+
+  ld r0,lastword
+  ld a,(r0)
+  ld (r14),a
+  inc r14
+  inc r14
+  ld a,0
+  ldb (r14),a
+  inc r14
+
+  ld r0,wordstr
+  ldb a,(r0)
+  ld r1,a
+  inc r0
+  ldb (r14),a
+  inc r14
+wd_col0:
+  ldb a,(r0)
+  ldb (r14),a
+  inc r0
+  inc r14
+  dec r1
+  bnz wd_col0
+
+  ret
+wd_semi:
+  dw wd_col
+  db 1
+  db 1,";"
+
+  ld a,$0d ; ret
+  ldb (r14),a
+  inc r14
+
+  ld r0,nextword
+  ld a,(r0)
+  ld r1,lastword
+  ld (r1),a
+  ld a,r14
+  ld (r0),a
+
+  ld r0,compileflags
+  ld a,0
+  ldb (r0),a
+
+  ret
+wd_dup:
+  dw wd_semi
+  db 0
+  db 3,"dup"
   dec r15
   dec r15
   ld a,(r15)
@@ -338,8 +458,34 @@ wd_rpop:
   ld a,r0
   push
   ret
-wd_add:
+wd_inc:
   dw wd_rpop
+  db 0
+  db 2,"1+"
+  ld r1,r15
+  dec r1
+  dec r1
+  ld a,(r1)
+  ld r0,a
+  inc r0
+  ld a,r0
+  ld (r1),a
+  ret
+wd_dec:
+  dw wd_inc
+  db 0
+  db 2,"1-"
+  ld r1,r15
+  dec r1
+  dec r1
+  ld a,(r1)
+  ld r0,a
+  dec r0
+  ld a,r0
+  ld (r1),a
+  ret
+wd_add:
+  dw wd_dec
   db 0
   db 1,"+"
   dec r15
@@ -370,9 +516,47 @@ wd_sub:
   inc r15
   inc r15
   ret
-wd_emit:
-deflastword:
+wd_divmod:
   dw wd_sub
+  db 0
+  db 4,"/mod"
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r9,a
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r8,a
+  call div
+  ld a,r8
+  ld (r15),a
+  inc r15
+  inc r15
+  ld a,r9
+  ld (r15),a
+  inc r15
+  inc r15
+  ret
+wd_div:
+  dw wd_divmod
+  db 0
+  db 1,"/"
+  call wd_divmod
+  call wd_swap
+  dec r15
+  dec r15
+  ret
+wd_mod:
+  dw wd_div
+  db 0
+  db 3,"mod"
+  call wd_divmod
+  dec r15
+  dec r15
+  ret
+wd_emit:
+  dw wd_mod
   db 0
   db 4,"emit"
   dec r15
@@ -380,11 +564,19 @@ deflastword:
   ld a,(r15)
   int 1
   ret
+deflastword:
+wd_bye:
+  dw wd_emit
+  db 0
+  db 3,"bye"
+  int 0
+  ret
 
 stack:
 wordstr: equ stack+256
 baseval: equ wordstr+256
 lastword: equ baseval+2
 nextword: equ lastword+2
-defnextword: equ nextword+2
+compileflags: equ nextword+2
+defnextword: equ compileflags+1+10
 
