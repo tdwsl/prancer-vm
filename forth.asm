@@ -55,18 +55,26 @@ runtokeni:
   ret
 runtokenq:
   ld r0,wordstr
-  ldb a,(r0)
-  ld r1,a
-  inc r0
-  call printstr
+  call printstrp
   ld r0,runtokenerrmsg
-  ldb a,(r0)
-  ld r1,a
-  inc r0
-  call printstr
+  call printstrp
   ret
 runtokenerrmsg:
   db 3," ?\n"
+
+; mul r8 by r9
+mul:
+  ld a,r9
+  push
+  ld a,0
+mul0:
+  add r8
+  dec r9
+  bnz mul0
+  ld r8,a
+  pop
+  ld r9,a
+  ret
 
 ; convert wordstr to integer in r0
 tointeger:
@@ -74,19 +82,48 @@ tointeger:
   ldb a,(r1)
   ld r2,a
   inc r1
+  ld r3,0
+
+  ld r4,"0"
+  ld r5,baseval
+  ld a,(r5)
+  ld r7,a
+  ld r6,11
+  cmp r6
+  bc tointegera10
+  add r4
+  ld r5,a
+  ld r7,a
+  ld a,r4
+  ld r6,a
+  b tointegerb10
+tointegera10:
+  ld r5,"9"+1
+  ld r6,"a"
+  ld r7,"a"-10
+  add r7
+  ld r7,a
+tointegerb10:
+
   ldb a,(r1)
   ld r2,"-"
   cmp r2
-  bnz tointegernm
+  bnz tointeger0
   inc r1
   dec r2
   bz tointegerfail
-tointegernm:
+  ld r3,1
+
 tointeger0:
+  ldb a,(r1)
 tointegerfail:
   inc r1
   ret
 
+printstrp:
+  ldb a,(r0)
+  ld r1,a
+  inc r0
 ; r0 = addr, r1 = len
 printstr:
   ldb a,(r0)
