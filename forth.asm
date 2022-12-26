@@ -84,9 +84,12 @@ tointeger:
   inc r1
   ld r3,0
 
+  ld r0,0
+  ld r10,"a"-10
   ld r4,"0"
   ld r5,baseval
   ld a,(r5)
+  ld r9,a
   ld r7,a
   ld r6,11
   cmp r6
@@ -116,6 +119,44 @@ tointegerb10:
 
 tointeger0:
   ldb a,(r1)
+  cmp r4
+  bnc tointeger1
+  cmp r5
+  bc tointeger1
+  sub r4
+  b tointegernext
+tointeger1:
+  cmp r6
+  bnc tointegerfail
+  cmp r7
+  bc tointegerfail
+  sub r10
+tointegernext:
+  push
+  ld a,r0
+  ld r8,a
+  call mul
+  ld a,r8
+  ld r0,a
+  pop
+  add r0
+  ld r0,a
+  inc r1
+  dec r2
+  bnc tointeger0
+
+  ld a,r3
+  bnz tointegerpos
+  ld a,r0
+  inv
+  ld r0,a
+  inc r0
+tointegerpos:
+
+  ld a,r0
+  cmp r0
+  ret
+
 tointegerfail:
   inc r1
   ret
