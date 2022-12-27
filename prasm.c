@@ -65,8 +65,8 @@ char data[65536];
 uint16_t size = 0;
 uint16_t org = 0;
 
-struct label labels[1000];
-struct unresolved unresolved[300];
+struct label labels[2000];
+struct unresolved unresolved[700];
 int nlabels = 0, nunresolved = 0;
 
 struct fileInfo infoStack[120];

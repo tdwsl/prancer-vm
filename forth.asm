@@ -1,7 +1,10 @@
-; attempt at forth interpreter
+; FORTH interpreter for Prancer VM - tdwsl 2022
 
   org $0100-2
   dw $0100
+
+  i_putc: equ 1
+  i_getc: equ 2
 
   ; entry point
 
@@ -126,6 +129,16 @@ mul0:
 
 ; div r8 by r9
 div:
+  ld a,r8
+  ld r8,0
+div0:
+  cmp r9
+  bnc div1
+  sub r9
+  inc r8
+  b div0
+div1:
+  ld r9,a
   ret
 
 ; convert wordstr to integer in r0
@@ -220,7 +233,7 @@ printstrp:
 ; r0 = addr, r1 = len
 printstr:
   ldb a,(r0)
-  int 1
+  int i_putc
   inc r0
   dec r1
   bnz printstr
@@ -318,10 +331,11 @@ getnexteof:
 
 ; load next char into a
 getnextc:
-  int 2
+  int i_getc
   ret
 
-; dictionary
+;;; dictionary ;;;
+
 wd_col:
   dw 0       ; prev word addr
   db 0       ; flags
@@ -394,8 +408,15 @@ wd_dup:
   inc r15
   inc r15
   ret
-wd_swap:
+wd_drop:
   dw wd_dup
+  db 0
+  db 4,"drop"
+  dec r15
+  dec r15
+  ret
+wd_swap:
+  dw wd_drop
   db 0
   db 4,"swap"
   dec r15
@@ -462,7 +483,8 @@ wd_inc:
   dw wd_rpop
   db 0
   db 2,"1+"
-  ld r1,r15
+  ld a,r15
+  ld r1,a
   dec r1
   dec r1
   ld a,(r1)
@@ -475,7 +497,8 @@ wd_dec:
   dw wd_inc
   db 0
   db 2,"1-"
-  ld r1,r15
+  ld a,r15
+  ld r1,a
   dec r1
   dec r1
   ld a,(r1)
@@ -492,13 +515,13 @@ wd_add:
   dec r15
   ld a,(r15)
   ld r0,a
-  dec r15
-  dec r15
-  ld a,(r15)
+  ld a,r15
+  ld r1,a
+  dec r1
+  dec r1
+  ld a,(r1)
   add r0
-  ld (r15),a
-  inc r15
-  inc r15
+  ld (r1),a
   ret
 wd_sub:
   dw wd_add
@@ -508,16 +531,34 @@ wd_sub:
   dec r15
   ld a,(r15)
   ld r0,a
+  ld a,r15
+  ld r1,a
+  dec r1
+  dec r1
+  ld a,(r1)
+  sub r0
+  ld (r1),a
+  ret
+wd_mul:
+  dw wd_sub
+  db 0
+  db 1,"*"
   dec r15
   dec r15
   ld a,(r15)
-  sub r0
-  ld (r15),a
-  inc r15
-  inc r15
+  ld r9,a
+  ld a,r15
+  ld r1,a
+  dec r1
+  dec r1
+  ld a,(r1)
+  ld r8,a
+  call mul
+  ld a,r8
+  ld (r1),a
   ret
 wd_divmod:
-  dw wd_sub
+  dw wd_mul
   db 0
   db 4,"/mod"
   dec r15
@@ -529,11 +570,11 @@ wd_divmod:
   ld a,(r15)
   ld r8,a
   call div
-  ld a,r8
+  ld a,r9
   ld (r15),a
   inc r15
   inc r15
-  ld a,r9
+  ld a,r8
   ld (r15),a
   inc r15
   inc r15
@@ -555,18 +596,197 @@ wd_mod:
   dec r15
   dec r15
   ret
-wd_emit:
+wd_and:
   dw wd_mod
+  db 0
+  db 3,"and"
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r0,a
+  ld a,r15
+  ld r1,a
+  dec r1
+  dec r1
+  ld a,(r1)
+  and r0
+  ld (r1),a
+  ret
+wd_or:
+  dw wd_and
+  db 0
+  db 2,"or"
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r0,a
+  ld a,r15
+  ld r1,a
+  dec r1
+  dec r1
+  ld a,(r1)
+  or r0
+  ld (r1),a
+  ret
+wd_xor:
+  dw wd_or
+  db 0
+  db 3,"xor"
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r0,a
+  ld a,r15
+  ld r1,a
+  dec r1
+  dec r1
+  ld a,(r1)
+  xor r0
+  ld (r1),a
+  ret
+wd_invert:
+  dw wd_xor
+  db 0
+  db 6,"invert"
+  ld a,r15
+  ld r0,a
+  dec r0
+  dec r0
+  ld a,(r0)
+  inv
+  ld (r0),a
+  ret
+wd_get:
+  dw wd_invert
+  db 0
+  db 1,"@"
+  ld a,r15
+  ld r0,a
+  dec r0
+  dec r0
+  ld a,(r0)
+  ld r1,a
+  ld a,(r1)
+  ld (r0),a
+  ret
+wd_set:
+  dw wd_get
+  db 0
+  db 1,"!"
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r0,a
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld (r0),a
+  ret
+wd_getc:
+  dw wd_set
+  db 0
+  db 2,"c@"
+  ld a,r15
+  ld r0,a
+  dec r0
+  dec r0
+  ld a,(r0)
+  ld r1,a
+  ldb a,(r1)
+  ld (r0),a
+  ret
+wd_setc:
+  dw wd_getc
+  db 0
+  db 2,"c!"
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r0,a
+  dec r15
+  dec r15
+  ld a,(r15)
+  ldb (r0),a
+  ret
+wd_emit:
+  dw wd_setc
   db 0
   db 4,"emit"
   dec r15
   dec r15
   ld a,(r15)
-  int 1
+  int i_putc
+  ret
+wd_prnum:
+  dw wd_emit
+  db 0
+  db 1,"."
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r0,a
+  ld r1,$8000
+  and r1
+  bz wd_prnumpos
+  ld a,"-"
+  int i_putc
+  ld a,r0
+  inv
+  ld r0,a
+  inc r0
+wd_prnumpos:
+  ld r1,wordstr
+  ld r2,baseval
+  ld a,(r2)
+  ld r2,a
+  ld a,r0
+wd_prnum0:
+  ld r8,a
+  ld a,r2
+  ld r9,a
+  call div
+  ld a,r9
+  ldb (r1),a
+  inc r1
+  ld a,r8
+  bnz wd_prnum0
+
+  ld r2,10
+  ld r3,"0"
+  ld r4,"a"
+  ld r5,wordstr
+wd_prnum1:
+  dec r1
+  ld a,r1
+  cmp r5
+  bnc wd_prnumend
+  ldb a,(r1)
+  cmp r2
+  bc wd_prnum2
+  add r3
+  b wd_prnum3
+wd_prnum2:
+  add r4
+wd_prnum3:
+  int i_putc
+  b wd_prnum1
+
+wd_prnumend:
+  ld a," "
+  int i_putc
+  ret
+wd_base:
+  dw wd_prnum
+  db 0
+  db 4,"base"
+  ld a,baseval
+  ld (r15),a
+  inc r15
+  inc r15
   ret
 deflastword:
 wd_bye:
-  dw wd_emit
+  dw wd_base
   db 0
   db 3,"bye"
   int 0
