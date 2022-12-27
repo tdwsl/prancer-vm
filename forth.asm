@@ -5,6 +5,12 @@
 
   i_putc: equ 1
   i_getc: equ 2
+  i_fopenr: equ $10
+  i_fopenw: equ $11
+  i_fputc: equ $12
+  i_fgetc: equ $13
+  i_feof: equ $14
+  i_fclose: equ $15
 
   ; entry point
 
@@ -22,13 +28,54 @@
   ld r0,compileflags
   ld a,0
   ldb (r0),a
+  ld r0,strmemptr
+  ld a,strmem
+  ld (r0),a
+
+  ; load init.f
+  ld r0,initfilename
+  ldb a,(r0)
+  ld r1,a
+  inc r0
+  int i_fopenr
+  bnz opened
+
+  ld r0,initfailmsg
+  call printstrp
+  int 0
+
+opened:
+  ld r0,getnextc+1
+  ld a,i_fgetc
+  ldb (r0),a
 
 l0:
   call getnext
   call runtoken
-  b l0
+  int i_feof
+  bz l0
+
+  ld r0,getnextc+1
+  ld a,i_getc
+  ldb (r0),a
+
+l1:
+  call getnext
+  call runtoken
+  b l1
+
+initfailmsg:
+  db 22,"failed to load init.f\n"
+initfilename:
+  db 6,"init.f"
 
 runtoken:
+  ld r0,wordstr
+  ldb a,(r0)
+  bnz runtokennz
+  ret
+
+runtokennz:
   call findword
   bnz runtokeni
 
@@ -57,6 +104,8 @@ runtoken:
   ret
 runtokenout:
   ldb a,(r2)
+  ld r2,2
+  and r2
   bnz runtokencoerr
 runtokenimm:
   ld a,r0
@@ -71,6 +120,7 @@ runtokeni:
   ld r1,compileflags
   ldb a,(r1)
   bz runtokeniout:
+compilepush:
   ld a,$0f ; ld a
   ldb (r14),a
   inc r14
@@ -81,10 +131,9 @@ runtokeni:
   ld a,$5f ; ld (r15),a
   ldb (r14),a
   inc r14
-  ld a,$bf ; inc r15
-  ldb (r14),a
+  ld a,$bfbf ; inc r15 | inc r15
+  ld (r14),a
   inc r14
-  ldb (r14),a
   inc r14
   ret
 runtokeniout:
@@ -299,8 +348,11 @@ getnext:
   ld r11,"A"
   ld r10,"Z"+1
   ld r9,32
+  ld r8,$ffff
 getnext0:
   call getnextc
+  cmp r8
+  bz getnext1
   cmp r12
   bnc getnext1
   cmp r11
@@ -323,11 +375,19 @@ getnext1:
   ret
 getnextz:
   ld a,r0
-  or r0
-  bnc getnexteof
-  b getnext0
-getnexteof:
-  int 0
+  ld r1," "
+  cmp r1
+  bz getnext0
+  ld r1,"\t"
+  cmp r1
+  bz getnext0
+  ld r1,"\n"
+  cmp r1
+  bz getnext0
+  xor r0
+  ld r0,wordstr
+  ld (r0),a
+  ret
 
 ; load next char into a
 getnextc:
@@ -376,7 +436,7 @@ wd_col0:
   ret
 wd_semi:
   dw wd_col
-  db 1
+  db 3
   db 1,";"
 
   ld a,$0d ; ret
@@ -395,8 +455,34 @@ wd_semi:
   ldb (r0),a
 
   ret
-wd_dup:
+wd_immediate:
   dw wd_semi
+  db 0
+  db 9,"immediate"
+  ld r0,lastword
+  ld a,(r0)
+  ld r0,a
+  inc r0
+  inc r0
+  ld r1,1
+  ldb a,(r0)
+  or r1
+  ldb (r0),a
+  ret
+wd_compileonly:
+  dw wd_immediate
+  db 0
+  db 11,"compile-only"
+  ld r0,lastword
+  ld a,(r0)
+  ld r0,a
+  inc r0
+  inc r0
+  ld a,3
+  ldb (r0),a
+  ret
+wd_dup:
+  dw wd_compileonly
   db 0
   db 3,"dup"
   dec r15
@@ -461,7 +547,11 @@ wd_rpush:
   dec r15
   pop
   ld r0,a
+  pop
+  ld r1,a
   ld a,(r15)
+  push
+  ld a,r1
   push
   ld a,r0
   push
@@ -473,9 +563,13 @@ wd_rpop:
   pop
   ld r0,a
   pop
+  ld r1,a
+  pop
   ld (r15),a
   inc r15
   inc r15
+  ld a,r1
+  push
   ld a,r0
   push
   ret
@@ -579,25 +673,8 @@ wd_divmod:
   inc r15
   inc r15
   ret
-wd_div:
-  dw wd_divmod
-  db 0
-  db 1,"/"
-  call wd_divmod
-  call wd_swap
-  dec r15
-  dec r15
-  ret
-wd_mod:
-  dw wd_div
-  db 0
-  db 3,"mod"
-  call wd_divmod
-  dec r15
-  dec r15
-  ret
 wd_and:
-  dw wd_mod
+  dw wd_divmod
   db 0
   db 3,"and"
   dec r15
@@ -708,8 +785,22 @@ wd_setc:
   ld a,(r15)
   ldb (r0),a
   ret
-wd_emit:
+wd_type:
   dw wd_setc
+  db 0
+  db 4,"type"
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r1,a
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r0,a
+  call printstr
+  ret
+wd_emit:
+  dw wd_type
   db 0
   db 4,"emit"
   dec r15
@@ -775,8 +866,144 @@ wd_prnumend:
   ld a," "
   int i_putc
   ret
-wd_base:
+wd_savemem:
   dw wd_prnum
+  db 0
+  db 8,"save-mem"
+  ld a,r15
+  ld r0,a
+  dec r0
+  dec r0
+  ld a,(r0)
+  ld r0,a
+  ld r1,strmemptr
+  ld a,(r1)
+  add r0
+  ld (r1),a
+  ret
+wd_parse:
+  dw wd_savemem
+  db 0
+  db 5,"parse"
+  dec r15
+  dec r15
+  ldb a,(r15)
+  ld r2,a
+  ld r0,strmemptr
+  ld a,(r0)
+  push
+  ld r0,a
+  ld r1,0
+wd_parse0:
+  call getnextc
+  ldb (r0),a
+  cmp r2
+  bz wd_parse1
+  inc r0
+  inc r1
+  b wd_parse0
+wd_parse1:
+  pop
+  ld (r15),a
+  inc r15
+  inc r15
+  ld a,r1
+  ld (r15),a
+  inc r15
+  inc r15
+  ret
+wd_parsename:
+  dw wd_parse
+  db 0
+  db 10,"parse-name"
+  call getnext
+  ld r0,wordstr
+  ldb a,(r0)
+  push
+  ld r1,a
+  inc r0
+  ld r2,strmemptr
+  ld a,(r2)
+  ld r2,a
+wd_parsename0:
+  ldb a,(r0)
+  ldb (r2),a
+  inc r0
+  inc r2
+  dec r1
+  bnz wd_parsename0
+  ld a,r2
+  ld r2,strmemptr
+  ld (r2),a
+  ld (r15),a
+  inc r15
+  inc r15
+  pop
+  ld (r15),a
+  inc r15
+  inc r15
+  ret
+wd_char:
+  dw wd_parsename
+  db 0
+  db 4,"char"
+  call wd_parsename+14
+  ld r0,wordstr+1
+  ldb a,(r0)
+  ld (r15),a
+  inc r15
+  inc r15
+  ret
+wd_ichar:
+  dw wd_char
+  db 3
+  db 6,"[char]"
+  call wd_parsename+14
+  ld r0,wordstr+1
+  ldb a,(r0)
+  ld r0,a
+  call compilepush
+  ret
+wd_prlit:
+  dw wd_ichar
+  db 1
+  db 2,".\""
+  ld a,34
+  ld (r15),a
+  inc r15
+  inc r15
+  call wd_parse+9
+  call wd_type+8
+  ret
+wd_strlit:
+  dw wd_prlit
+  db 1
+  db 2,"s\""
+  ld a,34
+  ld (r15),a
+  inc r15
+  inc r15
+  call wd_parse+9
+  ld r0,compileflags
+  ldb a,(r0)
+  bz wd_strlitnc
+
+  dec r15
+  dec r15
+  ld a,r15
+  ld r1,a
+  dec r15
+  dec r15
+  ld a,(r15)
+  ld r0,a
+  call compilepush
+  ld a,(r1)
+  ld r0,a
+  call compilepush
+wd_strlitnc:
+  ret
+wd_base:
+  dw wd_strlit
   db 0
   db 4,"base"
   ld a,baseval
@@ -784,9 +1011,81 @@ wd_base:
   inc r15
   inc r15
   ret
+wd_if:
+  dw wd_base
+  db 3
+  db 2,"if"
+  ld a,$cfcf ; dec r15 | dec r15
+  ld (r14),a
+  inc r14
+  inc r14
+  ld a,$024f ; bz | ld a,(r15)
+  ld (r14),a
+  inc r14
+  inc r14
+  pop
+  ld r0,a
+  pop
+  ld r1,a
+  ld a,r14
+  push
+  ld a,r1
+  push
+  ld a,r0
+  push
+  inc r14
+  ret
+wd_else:
+  dw wd_if
+  db 3
+  db 4,"else"
+  ld a,$01 ; b
+  ldb (r14),a
+  inc r14
+  ld a,r14
+  ld r3,a
+  inc r14
+  pop
+  ld r0,a
+  pop
+  ld r1,a
+  pop
+  ld r2,a
+  ld a,r14
+  inc r2
+  sub r2
+  dec r2
+  ldb (r2),a
+  ld a,r3
+  push
+  ld a,r1
+  push
+  ld a,r0
+  push
+  ret
+wd_then:
+  dw wd_else
+  db 3
+  db 4,"then"
+  pop
+  ld r0,a
+  pop
+  ld r1,a
+  pop
+  ld r2,a
+  ld a,r14
+  inc r2
+  sub r2
+  dec r2
+  ldb (r2),a
+  ld a,r1
+  push
+  ld a,r0
+  push
+  ret
 deflastword:
 wd_bye:
-  dw wd_base
+  dw wd_then
   db 0
   db 3,"bye"
   int 0
@@ -798,5 +1097,7 @@ baseval: equ wordstr+256
 lastword: equ baseval+2
 nextword: equ lastword+2
 compileflags: equ nextword+2
-defnextword: equ compileflags+1+10
+strmem: equ compileflags+1
+strmemptr: equ strmem+2048
+defnextword: equ strmemptr+2
 
