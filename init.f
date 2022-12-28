@@ -18,9 +18,6 @@ hex : >= - 8000 and 0= ; decimal
 : cell+ cell + ;
 : , here ! cell allot ;
 : c, here ! 1 allot ;
-
-: [,] ['] [here] execute ! cell ['] [allot] execute ; immediate compile-only
-: [c,] ['] [here] execute ! 1 ['] [allot] execute ; immediate compile-only
-\ : begin [here] >r ; immediate compile-only
-\ : again 1 [c,] r> [here] - 1- [c,] ; immediate compile-only
+: \ 10 parse ;
+: ( [char] ) parse ;
 

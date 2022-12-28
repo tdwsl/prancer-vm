@@ -1187,27 +1187,8 @@ wd_allot:
   ld r0,nextword
   ld (r0),a
   ret
-wd_chere:
-  dw wd_allot
-  db 3
-  db 6,"[here]"
-  ld a,r14
-  ld (r15),a
-  inc r15
-  inc r15
-  ret
-wd_callot:
-  dw wd_chere
-  db 3
-  db 7,"[allot]"
-  dec r15
-  dec r15
-  ld a,(r15)
-  add r14
-  ld r14,a
-  ret
 wd_create:
-  dw wd_callot
+  dw wd_allot
   db 0
   db 6,"create"
   call wd_col+5
