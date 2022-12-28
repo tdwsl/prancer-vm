@@ -23,6 +23,7 @@ void set16(uint16_t m, uint16_t s) {
 int insSize(unsigned char ins) {
     if((ins & 0xf0) == 0x10) return 3;
     if((ins & 0xf0) != 0) return 1;
+    if(ins == 0x06) return 1;
     if((ins & 0x08) == 0) return 2;
     if((ins & 0x0e) == 0x0e) return 3;
     return 1;
@@ -63,6 +64,9 @@ int run() {
             case 0x05:
                 if(!cf) { rpc += (char)memory[rpc+1] + 2; continue; }
                 break;
+            case 0x06:
+                rpc = acc;
+                continue;
             case 0x08:
                 cf = acc & 0x8000;
                 acc <<= 1;

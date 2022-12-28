@@ -6,7 +6,7 @@ Instruction set for Prancer VM
 3n LD Rn,A	03 BNZ #
 4n LD A,(Rn)	04 BC #
 5n LD (Rn),A	05 BNC #
-6n LDB A,(Rn)	06
+6n LDB A,(Rn)	06 JA
 7n LDB (Rn),A	07
 8n ADD Rn	08 SHL
 9n SUB Rn	09 SHR

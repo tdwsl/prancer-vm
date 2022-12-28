@@ -39,6 +39,7 @@ const struct instruction instructions[] = {
     {"bnz", 0x03, ARG_REL},
     {"bc", 0x04, ARG_REL},
     {"bnc", 0x05, ARG_REL},
+    {"ja", 0x06, 0},
     {"shl", 0x08, 0},
     {"shr", 0x09, 0},
     {"inv", 0x0A, 0},
@@ -59,7 +60,7 @@ const struct instruction instructions[] = {
     {"or", 0xE0, ARG_REG},
     {"xor", 0xF0, ARG_REG},
 };
-const int ninstructions = 25;
+const int ninstructions = 26;
 
 char data[65536];
 uint16_t size = 0;

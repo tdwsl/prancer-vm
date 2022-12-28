@@ -109,11 +109,12 @@ runtokenout:
   bnz runtokencoerr
 runtokenimm:
   ld a,r0
-  ld r0,runtokenaddr+1
-  ld (r0),a
-runtokenaddr:
-  call $ffff
-  ret
+  ja
+  ;ld r0,runtokenaddr+1
+  ;ld (r0),a
+;runtokenaddr:
+  ;call $ffff
+  ;ret
 runtokeni:
   call tointeger
   bnz runtokenq
@@ -547,12 +548,12 @@ wd_rpush:
   dec r15
   pop
   ld r0,a
-  pop
-  ld r1,a
+  ;pop
+  ;ld r1,a
   ld a,(r15)
   push
-  ld a,r1
-  push
+  ;ld a,r1
+  ;push
   ld a,r0
   push
   ret
@@ -563,13 +564,13 @@ wd_rpop:
   pop
   ld r0,a
   pop
-  ld r1,a
-  pop
+  ;ld r1,a
+  ;pop
   ld (r15),a
   inc r15
   inc r15
-  ld a,r1
-  push
+  ;ld a,r1
+  ;push
   ld a,r0
   push
   ret
@@ -1025,12 +1026,12 @@ wd_if:
   inc r14
   pop
   ld r0,a
-  pop
-  ld r1,a
+  ;pop
+  ;ld r1,a
   ld a,r14
   push
-  ld a,r1
-  push
+  ;ld a,r1
+  ;push
   ld a,r0
   push
   inc r14
@@ -1047,8 +1048,8 @@ wd_else:
   inc r14
   pop
   ld r0,a
-  pop
-  ld r1,a
+  ;pop
+  ;ld r1,a
   pop
   ld r2,a
   ld a,r14
@@ -1058,8 +1059,8 @@ wd_else:
   ldb (r2),a
   ld a,r3
   push
-  ld a,r1
-  push
+  ;ld a,r1
+  ;push
   ld a,r0
   push
   ret
@@ -1069,8 +1070,8 @@ wd_then:
   db 4,"then"
   pop
   ld r0,a
-  pop
-  ld r1,a
+  ;pop
+  ;ld r1,a
   pop
   ld r2,a
   ld a,r14
@@ -1078,14 +1079,114 @@ wd_then:
   sub r2
   dec r2
   ldb (r2),a
-  ld a,r1
-  push
+  ;ld a,r1
+  ;push
   ld a,r0
   push
   ret
+wd_begin:
+  dw wd_then
+  db 3
+  db 5,"begin"
+  pop
+  ld r0,a
+  ;pop
+  ;ld r1,a
+  ld a,r14
+  push
+  ;ld a,r1
+  ;push
+  ld a,r0
+  push
+  ret
+wd_again:
+  dw wd_begin
+  db 3
+  db 5,"again"
+  ld a,$01 ; b
+  ldb (r14),a
+  inc r14
+  pop
+  ld r0,a
+  ;pop
+  ;ld r1,a
+  pop
+  inc r14
+  sub r14
+  dec r14
+  ldb (r14),a
+  inc r14
+  ;ld a,r1
+  ;push
+  ld a,r0
+  push
+  ret
+wd_until:
+  dw wd_again
+  db 3
+  db 5,"until"
+  ld a,$cfcf ; dec r15 | dec r15
+  ld (r14),a
+  inc r14
+  inc r14
+  ld a,$024f ; bz | ld a,(r15)
+  ld (r14),a
+  inc r14
+  inc r14
+  pop
+  ld r0,a
+  ;pop
+  ;ld r1,a
+  pop
+  inc r14
+  sub r14
+  dec r14
+  ldb (r14),a
+  inc r14
+  ;ld a,r1
+  ;push
+  ld a,r0
+  push
+  ret
+wd_findword:
+  dw wd_until
+  db 0
+  db 1,"'"
+  call getnext
+  call findword
+  bnz wd_findword0
+  ld a,r0
+  inc r0
+  inc r0
+  inc r0
+  ldb a,(r0)
+  inc r0
+  add r0
+  ld (r15),a
+  inc r15
+  inc r15
+  ret
+wd_findword0:
+  ld r0,runtokenerrmsg
+  call printstrp
+  ret
+wd_ifindword:
+  dw wd_findword
+  db 3
+  db 3,"[']"
+  b wd_findword
+wd_execute:
+  dw wd_ifindword
+  db 0
+  db 7,"execute"
+  dec r15
+  dec r15
+  ld a,(r15)
+  ja
+  ret
 deflastword:
 wd_bye:
-  dw wd_then
+  dw wd_execute
   db 0
   db 3,"bye"
   int 0
