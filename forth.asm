@@ -473,7 +473,7 @@ wd_immediate:
 wd_compileonly:
   dw wd_immediate
   db 0
-  db 11,"compile-only"
+  db 12,"compile-only"
   ld r0,lastword
   ld a,(r0)
   ld r0,a
@@ -548,12 +548,8 @@ wd_rpush:
   dec r15
   pop
   ld r0,a
-  ;pop
-  ;ld r1,a
   ld a,(r15)
   push
-  ;ld a,r1
-  ;push
   ld a,r0
   push
   ret
@@ -564,13 +560,9 @@ wd_rpop:
   pop
   ld r0,a
   pop
-  ;ld r1,a
-  ;pop
   ld (r15),a
   inc r15
   inc r15
-  ;ld a,r1
-  ;push
   ld a,r0
   push
   ret
@@ -1026,12 +1018,8 @@ wd_if:
   inc r14
   pop
   ld r0,a
-  ;pop
-  ;ld r1,a
   ld a,r14
   push
-  ;ld a,r1
-  ;push
   ld a,r0
   push
   inc r14
@@ -1048,8 +1036,6 @@ wd_else:
   inc r14
   pop
   ld r0,a
-  ;pop
-  ;ld r1,a
   pop
   ld r2,a
   ld a,r14
@@ -1059,8 +1045,6 @@ wd_else:
   ldb (r2),a
   ld a,r3
   push
-  ;ld a,r1
-  ;push
   ld a,r0
   push
   ret
@@ -1070,8 +1054,6 @@ wd_then:
   db 4,"then"
   pop
   ld r0,a
-  ;pop
-  ;ld r1,a
   pop
   ld r2,a
   ld a,r14
@@ -1079,8 +1061,6 @@ wd_then:
   sub r2
   dec r2
   ldb (r2),a
-  ;ld a,r1
-  ;push
   ld a,r0
   push
   ret
@@ -1090,12 +1070,8 @@ wd_begin:
   db 5,"begin"
   pop
   ld r0,a
-  ;pop
-  ;ld r1,a
   ld a,r14
   push
-  ;ld a,r1
-  ;push
   ld a,r0
   push
   ret
@@ -1108,16 +1084,12 @@ wd_again:
   inc r14
   pop
   ld r0,a
-  ;pop
-  ;ld r1,a
   pop
   inc r14
   sub r14
   dec r14
   ldb (r14),a
   inc r14
-  ;ld a,r1
-  ;push
   ld a,r0
   push
   ret
@@ -1135,16 +1107,12 @@ wd_until:
   inc r14
   pop
   ld r0,a
-  ;pop
-  ;ld r1,a
   pop
   inc r14
   sub r14
   dec r14
   ldb (r14),a
   inc r14
-  ;ld a,r1
-  ;push
   ld a,r0
   push
   ret
@@ -1174,7 +1142,18 @@ wd_ifindword:
   dw wd_findword
   db 3
   db 3,"[']"
-  b wd_findword
+  call getnext
+  call findword
+  bnz wd_findword0
+  inc r0
+  inc r0
+  inc r0
+  ldb a,(r0)
+  inc r0
+  add r0
+  ld r0,a
+  call compilepush
+  ret
 wd_execute:
   dw wd_ifindword
   db 0
@@ -1184,9 +1163,75 @@ wd_execute:
   ld a,(r15)
   ja
   ret
+wd_here:
+  dw wd_execute
+  db 0
+  db 4,"here"
+  ld r0,nextword
+  ld a,(r0)
+  ld (r15),a
+  inc r15
+  inc r15
+  ret
+wd_allot:
+  dw wd_here
+  db 0
+  db 5,"allot"
+  ld r0,nextword
+  ld a,(r0)
+  ld r0,a
+  dec r15
+  dec r15
+  ld a,(r15)
+  add r0
+  ld r0,nextword
+  ld (r0),a
+  ret
+wd_chere:
+  dw wd_allot
+  db 3
+  db 6,"[here]"
+  ld a,r14
+  ld (r15),a
+  inc r15
+  inc r15
+  ret
+wd_callot:
+  dw wd_chere
+  db 3
+  db 7,"[allot]"
+  dec r15
+  dec r15
+  ld a,(r15)
+  add r14
+  ld r14,a
+  ret
+wd_create:
+  dw wd_callot
+  db 0
+  db 6,"create"
+  call wd_col+5
+  ld a,$0f ; ld a
+  ldb (r14),a
+  inc r14
+  ld a,r14
+  ld r0,6
+  add r0
+  ld (r14),a
+  inc r14
+  inc r14
+  ld a,$5f ; ld (r15),a
+  ldb (r14),a
+  inc r14
+  ld a,$bfbf ; inc r15 | inc r15
+  ld (r14),a
+  inc r14
+  inc r14
+  call wd_semi+5
+  ret
 deflastword:
 wd_bye:
-  dw wd_execute
+  dw wd_create
   db 0
   db 3,"bye"
   int 0
